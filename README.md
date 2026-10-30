@@ -32,9 +32,16 @@ Full build details, including the STIG partition layout and why each setting was
 
 | Scan | Date | Compliance score | Findings failed |
 |---|---|---|---|
-| Baseline (fresh install) | | | |
+| Baseline (fresh install) | 2026-10-30 | 49.0% | 256 (7 CAT I, 234 CAT II, 11 CAT III, 4 unrated) |
 | After manual remediation | | | |
 | After Ansible remediation | | | |
+
+Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), scap-security-guide 0.1.82, OpenSCAP 1.4.4.
+
+- Baseline breakdown by severity, NIST 800-53 family, and area, plus every CAT I finding: [`scans/baseline/summary.md`](scans/baseline/summary.md)
+- Full HTML report: download [`scans/baseline/report.html`](scans/baseline/report.html) and open it in a browser
+
+**Why a minimal install scored only 49%:** most STIG rules check for settings that must be actively configured (audit rules, PAM password and lockout policy, SSH restrictions, mount options, kernel parameters), not for software that shouldn't be installed. RHEL ships with general-purpose defaults, not DoD defaults.
 
 ## Repo layout
 
@@ -51,7 +58,7 @@ Full build details, including the STIG partition layout and why each setting was
 ├── scans/
 │   ├── baseline/     OpenSCAP results before any changes
 │   └── remediated/   OpenSCAP results after remediation
-├── scripts/          Helper scripts (scanning, weekly report)
+├── scripts/          Helper scripts (scan summary, weekly report)
 └── MAINTENANCE.md    Operations runbook and cadence
 ```
 
