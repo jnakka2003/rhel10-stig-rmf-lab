@@ -15,6 +15,8 @@ A homelab project that takes a fresh Red Hat Enterprise Linux 10 server through 
 | Automation | Ansible |
 | Checklists | DISA STIG Viewer |
 
+Full build details, including the STIG partition layout and why each setting was chosen: [`docs/build.md`](docs/build.md).
+
 ## How the project maps to RMF
 
 | RMF step | What I did | Where it lives |
@@ -39,6 +41,8 @@ A homelab project that takes a fresh Red Hat Enterprise Linux 10 server through 
 ```
 ├── ansible/          Ansible playbook and roles for STIG remediation
 ├── docs/
+│   ├── build.md      How the VM and OS were built, and why
+│   ├── images/       Screenshots
 │   ├── ssp.md        System Security Plan (lite)
 │   └── poam.md       Plan of Action and Milestones
 ├── notes/
