@@ -202,3 +202,60 @@ Oct 30 14:50:49 stig01.home.arpa systemd[1]: Failed to enqueue replace-irreversi
 ```
 
 The same journal search also showed `sudo` recording each command used for this fix (user, terminal, working directory, full command line), which is the accountability trail the audit (AU) controls build on.
+
+### RHEL-10-001040: Enable GPG signature checks for local packages
+
+| | |
+|---|---|
+| **Severity** | CAT I (high) |
+| **NIST 800-53** | CM-11(a), CM-11(b), CM-5(3), CM-6(a), SA-12, SA-12(10) |
+| **Finding** | `localpkg_gpgcheck` was not set, so it defaulted to off. |
+| **Risk** | `dnf` verified signatures on packages downloaded from Red Hat's repositories (`gpgcheck=1`), but not on `.rpm` files installed directly from disk. A tampered or malicious RPM from an email, download, or file share would be installed as root with no check of who built it: a supply-chain risk. |
+
+**Check**
+
+```
+$ cat /etc/dnf/dnf.conf
+[main]
+gpgcheck=1
+installonly_limit=3
+clean_requirements_on_remove=True
+best=True
+skip_if_unavailable=False
+
+$ sudo dnf config-manager --dump | grep -i gpgcheck
+gpgcheck = 1
+localpkg_gpgcheck = 0        <- effective value: off
+repo_gpgcheck = 0
+```
+
+**Fix**
+
+```
+$ sudo dnf config-manager --save --setopt=localpkg_gpgcheck=1
+```
+
+Using `dnf`'s own config command instead of editing the file by hand avoids typos and duplicate entries.
+
+**Verify**
+
+```
+$ cat /etc/dnf/dnf.conf
+[main]
+gpgcheck=1
+installonly_limit=3
+clean_requirements_on_remove=True
+best=True
+skip_if_unavailable=False
+localpkg_gpgcheck=1
+
+$ sudo dnf config-manager --dump | grep -i localpkg_gpgcheck
+localpkg_gpgcheck = 1
+
+$ sudo oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig \
+    --rule xccdf_org.ssgproject.content_rule_ensure_gpgcheck_local_packages \
+    /usr/share/xml/scap/ssg/content/ssg-rhel10-ds.xml
+
+Title   Ensure gpgcheck Enabled for Local Packages
+Result  pass
+```
