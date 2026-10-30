@@ -123,3 +123,82 @@ Title   Disable SSH Access via Empty Passwords
 Rule    xccdf_org.ssgproject.content_rule_sshd_disable_empty_passwords
 Result  pass
 ```
+
+### RHEL-10-700960 and RHEL-10-700950: Disable Ctrl-Alt-Del reboot and burst action
+
+| | |
+|---|---|
+| **Severity** | CAT I (high), both |
+| **NIST 800-53** | AC-6(1), CM-6(a) |
+| **Finding** | Pressing Ctrl-Alt-Del on the console rebooted the server immediately, with no login. Separately, systemd's burst action (7 presses within 2 seconds) was set to `reboot-force`. |
+| **Risk** | Anyone with console access, or an accidental keypress, could take the server down. `reboot-force` skips the clean shutdown (services aren't stopped, filesystems aren't unmounted cleanly), which risks data corruption. The burst action fires even when the normal mapping is disabled, so both settings must be fixed. |
+
+**Check**
+
+```
+$ systemctl is-enabled ctrl-alt-del.target
+alias
+
+$ ls -l /etc/systemd/system/ctrl-alt-del.target /usr/lib/systemd/system/ctrl-alt-del.target
+/etc/systemd/system/ctrl-alt-del.target -> /usr/lib/systemd/system/reboot.target
+/usr/lib/systemd/system/ctrl-alt-del.target -> reboot.target
+
+$ systemctl show --property=CtrlAltDelBurstAction
+CtrlAltDelBurstAction=reboot-force
+```
+
+`ctrl-alt-del.target` is an alias for `reboot.target`. The `/usr/lib` link is the vendor default; the `/etc` link (created by the installer) is the admin layer, which takes precedence.
+
+**Fix: RHEL-10-700960 (normal mapping)**
+
+```
+$ sudo systemctl disable ctrl-alt-del.target
+Removed '/etc/systemd/system/ctrl-alt-del.target'.
+$ sudo systemctl mask ctrl-alt-del.target
+Created symlink '/etc/systemd/system/ctrl-alt-del.target' → '/dev/null'.
+```
+
+Masking points the unit at `/dev/null`, so nothing can start it: not the keypress, not another unit, not an admin by accident. That is stronger than `disable`, which only stops it from starting automatically.
+
+**Fix: RHEL-10-700950 (burst action)**
+
+The official remediation script appends `CtrlAltDelBurstAction=none` to `/etc/systemd/system.conf`. On RHEL 10 that file doesn't exist: newer systemd ships its defaults in `/usr/lib/systemd/system.conf` and leaves `/etc` for admin overrides. Appending to the missing file would create one with no `[Manager]` section header, and systemd would ignore the setting. The override was created with the header instead:
+
+```
+$ sudo tee /etc/systemd/system.conf > /dev/null <<'EOF'
+# DISA STIG RHEL-10-700950: disable the Ctrl-Alt-Del burst reboot
+[Manager]
+CtrlAltDelBurstAction=none
+EOF
+$ sudo systemctl daemon-reload
+```
+
+**Verify**
+
+```
+$ systemctl show --property=CtrlAltDelBurstAction
+CtrlAltDelBurstAction=none
+
+$ sudo oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig \
+    --rule xccdf_org.ssgproject.content_rule_disable_ctrlaltdel_reboot \
+    --rule xccdf_org.ssgproject.content_rule_disable_ctrlaltdel_burstaction \
+    /usr/share/xml/scap/ssg/content/ssg-rhel10-ds.xml
+
+Title   Disable Ctrl-Alt-Del Burst Action
+Result  pass
+
+Title   Disable Ctrl-Alt-Del Reboot Activation
+Result  pass
+```
+
+**Live test:** Ctrl-Alt-Del was sent 9 times from the Proxmox console, including about 7 presses within 2 seconds (the burst threshold). The server stayed up, and systemd logged a refusal for each press:
+
+```
+$ sudo journalctl -b --since "-5 min" | grep -i ctrl-alt-del
+Oct 30 14:50:46 stig01.home.arpa systemd[1]: Failed to enqueue replace-irreversibly job for ctrl-alt-del.target: Unit ctrl-alt-del.target is masked.
+Oct 30 14:50:47 stig01.home.arpa systemd[1]: Failed to enqueue replace-irreversibly job for ctrl-alt-del.target: Unit ctrl-alt-del.target is masked.
+Oct 30 14:50:49 stig01.home.arpa systemd[1]: Failed to enqueue replace-irreversibly job for ctrl-alt-del.target: Unit ctrl-alt-del.target is masked.
+...  (9 entries total, 14:50:46 to 14:50:50)
+```
+
+The same journal search also showed `sudo` recording each command used for this fix (user, terminal, working directory, full command line), which is the accountability trail the audit (AU) controls build on.
