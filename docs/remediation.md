@@ -259,3 +259,107 @@ $ sudo oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig \
 Title   Ensure gpgcheck Enabled for Local Packages
 Result  pass
 ```
+
+### RHEL-10-600000 and RHEL-10-600010: GRUB bootloader password and non-default admin username
+
+| | |
+|---|---|
+| **Severity** | CAT I (high), both |
+| **NIST 800-53** | CM-6(a) |
+| **Finding** | GRUB had no password, and its admin (superuser) name was the default `root`. |
+| **Risk** | Anyone at the console could press `e` at the boot menu, add `rd.break` or `init=/bin/bash` to the kernel line, and boot into a root shell with no password. A GRUB password closes that path. A non-default username means an attacker also has to guess the account name. |
+
+The GRUB admin username is shown here as `<grub-admin>`. It's kept out of this repo on purpose, since being hard to guess is the point of RHEL-10-600010.
+
+**Safety:** a Proxmox snapshot (`before-grub`) was taken first, since a mistake here can leave the system unable to boot or permanently locked out of boot-entry editing.
+
+**Check**
+
+```
+$ sudo cat /etc/grub.d/01_users
+#!/usr/bin/sh -e
+cat << EOF
+if [ -f \${prefix}/user.cfg ]; then
+  source \${prefix}/user.cfg
+  if [ -n "\${GRUB2_PASSWORD}" ]; then
+    set superusers="root"
+    export superusers
+    password_pbkdf2 root \${GRUB2_PASSWORD}
+  fi
+fi
+EOF
+
+$ sudo ls -l /boot/grub2/user.cfg
+ls: cannot access '/boot/grub2/user.cfg': No such file or directory
+```
+
+`01_users` generates GRUB's user section: if `user.cfg` holds a password hash, it makes `root` the superuser and gives `root` that password. With no `user.cfg`, GRUB had no password at all.
+
+**Fix: rename the GRUB admin (RHEL-10-600010)**
+
+```
+$ sudo cp -p /etc/grub.d/01_users /root/01_users.orig
+$ GRUBUSER=<grub-admin>
+$ sudo sed -i "s/set superusers=\"root\"/set superusers=\"$GRUBUSER\"/; s/password_pbkdf2 root /password_pbkdf2 $GRUBUSER /" /etc/grub.d/01_users
+```
+
+- **Both lines must change.** The STIG fix text only mentions the `set superusers=` line. Changing only that line makes `<grub-admin>` the superuser while the password stays attached to `root`, so no one can authenticate and boot-entry editing is locked out until the system is repaired from rescue media.
+- **The backup goes outside `/etc/grub.d/`.** `grub2-mkconfig` runs every executable file in that directory, so a copy left there (permissions preserved by `-p`) would also run and produce a second, conflicting user block.
+
+**Fix: set the password (RHEL-10-600000) and rebuild the config**
+
+```
+$ sudo grub2-setpassword
+Enter password:
+Confirm password:
+
+$ sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+Generating grub configuration file ...
+Adding boot menu entry for UEFI Firmware Settings ...
+done
+```
+
+- `grub2-setpassword` stores a PBKDF2-SHA512 hash in `/boot/grub2/user.cfg`, not the password itself. The GRUB password is different from any login password.
+- On RHEL 9 and later, the real config is `/boot/grub2/grub.cfg` even on UEFI systems; the file on the EFI partition is a stub that points to it. Writing the config to the EFI partition instead is a common way to break booting.
+
+**Verify**
+
+```
+$ sudo ls -l /boot/grub2/user.cfg
+-rw-------. 1 root root 298 Oct 30 15:00 /boot/grub2/user.cfg
+
+$ sudo grep -c GRUB2_PASSWORD=grub.pbkdf2.sha512 /boot/grub2/user.cfg
+1
+
+$ sudo grep -A3 superusers /boot/grub2/grub.cfg
+    set superusers="<grub-admin>"
+    export superusers
+    password_pbkdf2 <grub-admin> ${GRUB2_PASSWORD}
+
+$ sudo oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig \
+    --rule xccdf_org.ssgproject.content_rule_grub2_password \
+    --rule xccdf_org.ssgproject.content_rule_grub2_admin_username \
+    /usr/share/xml/scap/ssg/content/ssg-rhel10-ds.xml
+
+Title   Set the Boot Loader Admin Username to a Non-Default Value
+Result  pass
+
+Title   Set Boot Loader Password in grub2
+Result  pass
+```
+
+**Live test:** _pending. Reboot, press `e` at the GRUB menu, confirm `root` is refused, `<grub-admin>` with the GRUB password is accepted, and a normal boot needs no password._
+
+## CAT I status
+
+All 7 CAT I findings from the baseline scan are remediated and pass targeted rescans.
+
+| STIG ID | Finding | Status |
+|---|---|---|
+| RHEL-10-600455 | Empty passwords allowed by PAM | Fixed, verified |
+| RHEL-10-700610 | SSH empty passwords not explicitly disabled | Fixed, verified |
+| RHEL-10-700960 | Ctrl-Alt-Del reboots the system | Fixed, verified, live tested |
+| RHEL-10-700950 | Ctrl-Alt-Del burst action forces reboot | Fixed, verified, live tested |
+| RHEL-10-001040 | No signature check on local packages | Fixed, verified |
+| RHEL-10-600000 | No GRUB password | Fixed, verified |
+| RHEL-10-600010 | Default GRUB admin username | Fixed, verified |
