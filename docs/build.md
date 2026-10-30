@@ -75,5 +75,7 @@ sda                             8:0    0   40G  0 disk
 |---|---|
 | Registration | `subscription-manager register` (updates only). `rhc connect` was avoided because it also installs a remote-management agent, which adds attack surface. |
 | Patching | `dnf upgrade`; `dnf needs-restarting -r` reported kernel, glibc, systemd and others required a reboot. Kernel went from `6.12.0-211.7.3` to `6.12.0-211.69.1`; after reboot `needs-restarting` exited 0. |
-| Guest agent | `qemu-guest-agent` installed so Proxmox can report the IP and shut the VM down cleanly. |
+| Guest agent | `qemu-guest-agent` was already installed: the installer detects a KVM guest and adds it even on Minimal Install. Enabled and verified `active` so Proxmox can report the IP and shut the VM down cleanly. |
 | Snapshot | Proxmox snapshot `baseline-patched` taken before any hardening, so the system can be rolled back and the Ansible playbook re-tested from a clean state. |
+
+![Proxmox snapshot taken before hardening](images/03-proxmox-snapshot.png)
