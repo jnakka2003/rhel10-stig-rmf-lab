@@ -1,0 +1,56 @@
+# RHEL 10 STIG Hardening and RMF Lab
+
+> **Status:** In progress. Baseline scan and remediation results will be added as the lab is completed.
+
+A homelab project that takes a fresh Red Hat Enterprise Linux 10 server through a small-scale version of the DoD Risk Management Framework (RMF): scan it against the DISA STIG, fix the findings by hand and with Ansible, track what's left in a POA&M, and keep monitoring it with weekly patch and compliance reports.
+
+## Lab environment
+
+| Component | Details |
+|---|---|
+| Hypervisor | Proxmox VE 9.2 on a Lenovo ThinkCentre M920q |
+| Target system | `stig01`, RHEL 10.2, minimal install (no GUI) |
+| Compliance scanner | OpenSCAP with `scap-security-guide`, DISA STIG profile for RHEL 10 |
+| Vulnerability scanner | Nessus Essentials |
+| Automation | Ansible |
+| Checklists | DISA STIG Viewer |
+
+## How the project maps to RMF
+
+| RMF step | What I did | Where it lives |
+|---|---|---|
+| 1. Categorize | Described the system and rated its impact | [`docs/ssp.md`](docs/ssp.md) |
+| 2. Select | Chose the DISA STIG as the control baseline | [`docs/ssp.md`](docs/ssp.md) |
+| 3. Implement | Fixed findings manually, then automated with Ansible | [`ansible/`](ansible/), [`notes/`](notes/) |
+| 4. Assess | Baseline and post-remediation scans | [`scans/`](scans/) |
+| 5. Authorize | Documented accepted risks and open items | [`docs/poam.md`](docs/poam.md) |
+| 6. Monitor | Weekly patching, rescans, and log/account review | [`MAINTENANCE.md`](MAINTENANCE.md), [`reports/weekly/`](reports/weekly/) |
+
+## Results
+
+| Scan | Date | Compliance score | Findings failed |
+|---|---|---|---|
+| Baseline (fresh install) | | | |
+| After manual remediation | | | |
+| After Ansible remediation | | | |
+
+## Repo layout
+
+```
+├── ansible/          Ansible playbook and roles for STIG remediation
+├── docs/
+│   ├── ssp.md        System Security Plan (lite)
+│   └── poam.md       Plan of Action and Milestones
+├── notes/
+│   └── journal.md    Lab journal: commands, errors, and what I learned
+├── reports/weekly/   Weekly continuous-monitoring reports
+├── scans/
+│   ├── baseline/     OpenSCAP results before any changes
+│   └── remediated/   OpenSCAP results after remediation
+├── scripts/          Helper scripts (scanning, weekly report)
+└── MAINTENANCE.md    Operations runbook and cadence
+```
+
+## A note on passwords: NIST vs. the STIG
+
+NIST SP 800-63B Rev. 4 says not to force periodic password changes. The RHEL 10 STIG (RHEL-10-600100) still requires a 60-day maximum password age. This system follows the STIG, because on DoD systems the STIG is the enforced baseline. The conflict is documented in the POA&M.
