@@ -23,7 +23,7 @@ Full build details, including the STIG partition layout and why each setting was
 |---|---|---|
 | 1. Categorize | Described the system and rated its impact | [`docs/ssp.md`](docs/ssp.md) |
 | 2. Select | Chose the DISA STIG as the control baseline | [`docs/ssp.md`](docs/ssp.md) |
-| 3. Implement | Fixed findings manually, then automated with Ansible | [`ansible/`](ansible/), [`notes/`](notes/) |
+| 3. Implement | Fixed findings manually, then automated with Ansible | [`docs/remediation.md`](docs/remediation.md), [`ansible/`](ansible/) |
 | 4. Assess | Baseline and post-remediation scans | [`scans/`](scans/) |
 | 5. Authorize | Documented accepted risks and open items | [`docs/poam.md`](docs/poam.md) |
 | 6. Monitor | Weekly patching, rescans, and log/account review | [`MAINTENANCE.md`](MAINTENANCE.md), [`reports/weekly/`](reports/weekly/) |
@@ -52,6 +52,7 @@ Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), al
 ├── docs/
 │   ├── build.md      How the VM and OS were built, and why
 │   ├── images/       Screenshots
+│   ├── remediation.md  Manual fixes: check, fix, and verification for each finding
 │   ├── ssp.md        System Security Plan (lite)
 │   └── poam.md       Plan of Action and Milestones
 ├── notes/
