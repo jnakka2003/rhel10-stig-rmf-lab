@@ -36,7 +36,9 @@ Full build details, including the STIG partition layout and why each setting was
 | After manual remediation | | | |
 | After Ansible remediation | | | |
 
-Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), scap-security-guide 0.1.82, OpenSCAP 1.4.4.
+Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), aligned to **STIG V1R2**. Content: scap-security-guide 0.1.82. Scanner: OpenSCAP 1.4.4.
+
+![Baseline OpenSCAP report: 49% score, 256 failed rules](docs/images/04-baseline-report.png)
 
 - Baseline breakdown by severity, NIST 800-53 family, and area, plus every CAT I finding: [`scans/baseline/summary.md`](scans/baseline/summary.md)
 - Full HTML report: download [`scans/baseline/report.html`](scans/baseline/report.html) and open it in a browser
