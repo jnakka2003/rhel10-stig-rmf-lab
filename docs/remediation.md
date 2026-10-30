@@ -53,3 +53,71 @@ Profile ID: local
 Enabled features:
 - without-nullok
 ```
+
+A second SSH session logged in successfully and `sudo whoami` returned `root`, confirming both the remote (`password-auth`) and local (`system-auth`) paths still work. Targeted rescan result: `pass` (see the next finding for the command).
+
+### RHEL-10-700610: Disable SSH access via empty passwords
+
+| | |
+|---|---|
+| **Severity** | CAT I (high) |
+| **NIST 800-53** | AC-17(a), CM-6(a), CM-7(a), CM-7(b) |
+| **Finding** | `PermitEmptyPasswords` was not set in any SSH configuration file. |
+| **Risk** | SSH already refused empty passwords, but only because of a compiled-in default. Defaults can change between versions, and an assessor can't tell a deliberate setting from an accidental one. The STIG requires security settings to be explicitly configured. |
+
+**Check**
+
+```
+$ sudo sshd -T | grep -i permitemptypasswords
+permitemptypasswords no            <- effective value is already secure
+
+$ sudo grep -ri permitemptypasswords /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+/etc/ssh/sshd_config:#PermitEmptyPasswords no    <- only a comment documenting the default
+
+$ sudo ls -l /etc/ssh/sshd_config.d/
+-rw-------. 1 root root 412 Oct  7 20:00 40-redhat-crypto-policies.conf
+-rw-------. 1 root root 307 Oct  7 20:00 50-redhat.conf
+```
+
+The SSH config files are readable only by root (`-rw-------`), which is itself a STIG requirement.
+
+**Fix**
+
+```
+$ sudo tee /etc/ssh/sshd_config.d/00-complianceascode-hardening.conf > /dev/null <<'EOF'
+# DISA STIG RHEL-10-700610: SSH must not allow empty passwords
+PermitEmptyPasswords no
+EOF
+$ sudo chmod 600 /etc/ssh/sshd_config.d/00-complianceascode-hardening.conf
+$ sudo sshd -t && echo "config OK"
+config OK
+$ sudo systemctl reload sshd
+```
+
+- **Why a drop-in starting with `00-`:** `sshd` uses the *first* value it reads for each setting and reads drop-ins in alphabetical order, so `00-` takes precedence over Red Hat's `40-` and `50-` files.
+- **Why this filename:** it's the file the SCAP Security Guide's automated remediation writes to, so the later Ansible run updates this file instead of creating a conflicting one.
+- **Why `sshd -t` first:** it validates syntax. Reloading SSH with a broken config can lock out remote access.
+
+**Verify**
+
+```
+$ sudo sshd -T | grep -i permitemptypasswords
+permitemptypasswords no
+```
+
+Targeted rescan of both CAT I rules fixed so far:
+
+```
+$ sudo oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig \
+    --rule xccdf_org.ssgproject.content_rule_no_empty_passwords \
+    --rule xccdf_org.ssgproject.content_rule_sshd_disable_empty_passwords \
+    /usr/share/xml/scap/ssg/content/ssg-rhel10-ds.xml
+
+Title   Prevent Login to Accounts With Empty Password
+Rule    xccdf_org.ssgproject.content_rule_no_empty_passwords
+Result  pass
+
+Title   Disable SSH Access via Empty Passwords
+Rule    xccdf_org.ssgproject.content_rule_sshd_disable_empty_passwords
+Result  pass
+```
