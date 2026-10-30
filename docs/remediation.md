@@ -105,6 +105,8 @@ $ sudo sshd -T | grep -i permitemptypasswords
 permitemptypasswords no
 ```
 
+After the reload, a fresh SSH session from a second terminal logged in successfully before the original session was closed.
+
 Targeted rescan of both CAT I rules fixed so far:
 
 ```
