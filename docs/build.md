@@ -27,6 +27,7 @@ Proxmox VE 9.2 on a Lenovo ThinkCentre M920q (node `pve2`), VM ID 203.
 | Root account | Locked | Admin access goes through a named user and `sudo`, so every privileged action is tied to a person in the logs. |
 | Time | America/New_York, NTP on (`2.rhel.pool.ntp.org`) | Accurate time keeps audit logs trustworthy. The public pool is left in place on purpose; the STIG expects an authoritative time source, so it should appear as a finding. |
 | Kdump | Left enabled (default) | The STIG says to disable it unless needed; left on so the baseline captures it. |
+| FIPS mode | Enabled at install | The installer was booted with `fips=1` on its kernel command line (confirmed in `/var/log/anaconda/journal.log`), and it ran its "Set up FIPS for the payload installation" and "Configure FIPS" tasks. RHEL 10 only supports enabling FIPS mode at install time; switching an installed system to FIPS isn't supported. The kernel argument wasn't added deliberately during this build, and whether it came from the ISO's boot menu entry hasn't been checked. |
 | Disk encryption | Not enabled | A LUKS passphrase at every VM boot isn't practical in a homelab. Tracked as an accepted risk in the [POA&M](poam.md). |
 
 ## Partitioning
@@ -76,6 +77,7 @@ sda                             8:0    0   40G  0 disk
 | Registration | `subscription-manager register` (updates only). `rhc connect` was avoided because it also installs a remote-management agent, which adds attack surface. |
 | Patching | `dnf upgrade`; `dnf needs-restarting -r` reported kernel, glibc, systemd and others required a reboot. Kernel went from `6.12.0-211.7.3` to `6.12.0-211.69.1`; after reboot `needs-restarting` exited 0. |
 | Guest agent | `qemu-guest-agent` was already installed: the installer detects a KVM guest and adds it even on Minimal Install. Enabled and verified `active` so Proxmox can report the IP and shut the VM down cleanly. |
+| FIPS check | `cat /proc/sys/crypto/fips_enabled` returns `1`; `update-crypto-policies --show` returns `FIPS`; `fips=1` is in `GRUB_CMDLINE_LINUX` in `/etc/default/grub`. |
 | Snapshot | Proxmox snapshot `baseline-patched` taken before any hardening, so the system can be rolled back and the Ansible playbook re-tested from a clean state. |
 
 ![Proxmox snapshot taken before hardening](images/03-proxmox-snapshot.png)

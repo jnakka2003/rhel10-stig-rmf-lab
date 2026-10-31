@@ -348,7 +348,16 @@ Title   Set Boot Loader Password in grub2
 Result  pass
 ```
 
-**Live test:** _pending. Reboot, press `e` at the GRUB menu, confirm `root` is refused, `<grub-admin>` with the GRUB password is accepted, and a normal boot needs no password._
+**Live test:** the VM was rebooted from Proxmox and the GRUB menu was stopped with an arrow key.
+
+- Pressing `e` on the default entry no longer opens the editor. GRUB asks for credentials first:
+
+  ![GRUB asking for a username before allowing boot-entry edits](images/05-grub-username-prompt.png)
+
+- Logging in as `<grub-admin>` with the GRUB password opened the editor for the `6.12.0-211.69.1` entry. Nothing was changed; Esc returned to the menu.
+- Selecting the default entry and pressing Enter booted normally to the login prompt with no GRUB password requested. The password protects editing and the GRUB command line, not ordinary boots.
+
+The editor screen also showed the kernel command line that the password now protects: `linux ($root)/vmlinuz-6.12.0-211.69.1.el10_2.x86_64 root=/dev/mapper/rhel_stig01-root ro ... fips=1`. Before the fix, appending `rd.break` there would have given a root shell.
 
 ## CAT I status
 
