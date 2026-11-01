@@ -372,3 +372,85 @@ All 7 CAT I findings from the baseline scan are remediated and pass targeted res
 | RHEL-10-001040 | No signature check on local packages | Fixed, verified |
 | RHEL-10-600000 | No GRUB password | Fixed, verified |
 | RHEL-10-600010 | Default GRUB admin username | Fixed, verified |
+
+## Remaining CAT II findings after the Ansible playbook
+
+The DISA STIG playbook ([`ansible/README.md`](../ansible/README.md)) brought the system to 96.6% with 8 CAT II findings left. These are handled individually below or tracked in the [POA&M](poam.md).
+
+### RHEL-10-200601: Enable fapolicyd (application allow-listing)
+
+| | |
+|---|---|
+| **Severity** | CAT II (medium) |
+| **NIST 800-53** | CM-6(a), SI-4(22) |
+| **Finding** | `fapolicyd` was installed and configured by the playbook, but deliberately not started, because it blocks Ansible's own temporary module files. |
+| **Risk** | Without application allow-listing, any program dropped onto the system (malware, an attacker's tools) can be executed. |
+
+**Check: policy left by the playbook**
+
+```
+$ sudo cat /etc/fapolicyd/rules.d/99-deny-everything.rules
+# Red Hat KCS 7003854 (https://access.redhat.com/solutions/7003854)
+deny perm=any all : all
+
+$ sudo grep ^permissive /etc/fapolicyd/fapolicyd.conf
+permissive = 0
+```
+
+Enforcing mode, with a final rule denying anything not explicitly allowed by an earlier rule.
+
+**Fix**
+
+```
+$ sudo systemctl enable --now fapolicyd
+Created symlink '/etc/systemd/system/multi-user.target.wants/fapolicyd.service' → '/usr/lib/systemd/system/fapolicyd.service'.
+$ systemctl is-active fapolicyd
+active
+$ systemctl is-enabled fapolicyd
+enabled
+```
+
+**Verify: trusted software still runs**
+
+```
+$ sudo whoami
+root
+$ oscap --version | head -1
+OpenSCAP command line tool (oscap) 1.4.4
+```
+
+**Verify: an untrusted program is blocked**
+
+`/usr/bin/true` was copied to `/usr/local/bin/mytrue`. The file is byte-for-byte identical, but fapolicyd's trust database is built from the RPM database (path plus hash), so the copy at a new path is untrusted.
+
+```
+$ sudo cp /usr/bin/true /usr/local/bin/mytrue
+$ sudo chmod 755 /usr/local/bin/mytrue
+$ /usr/local/bin/mytrue; echo "exit code: $?"
+-bash: /usr/local/bin/mytrue: Operation not permitted
+exit code: 126
+
+$ sudo ausearch -m FANOTIFY -ts recent -i | tail -3
+type=CWD     ... cwd=/home/jnakka
+type=SYSCALL ... syscall=execve success=no exit=EPERM(Operation not permitted) ... auid=jnakka uid=jnakka ... exe=/usr/bin/bash
+type=FANOTIFY ... resp=deny fan_type=rule_info fan_info=13 subj_trust=unknown obj_trust=no
+```
+
+The audit record shows who attempted the execution (`auid=jnakka`), what was attempted (`execve`), that it failed with `EPERM`, and why: the object isn't trusted (`obj_trust=no`) and rule 13 denied it.
+
+**Residual risk found during testing: shell scripts are allowed**
+
+A test shell script ran under fapolicyd, both as `bash ~/test.sh` and when executed directly after being copied to `/usr/local/bin` and made executable. No FANOTIFY denial was logged. The reason is in RHEL's default rules:
+
+```
+$ sudo grep -rn shellscript /etc/fapolicyd/rules.d/
+/etc/fapolicyd/rules.d/72-shell.rules:3:allow perm=any all : ftype=text/x-shellscript
+```
+
+The default policy explicitly allows every shell script. fapolicyd blocks untrusted compiled programs and untrusted files for language interpreters such as Python and Perl, but not shell scripts. The STIG requirement (fapolicyd enabled, deny-by-default) is met; the script gap is recorded in the [POA&M](poam.md) as a residual risk.
+
+(An earlier attempt to run the script from `/usr/local/bin` failed with `Permission denied`, not `Operation not permitted`. That was ordinary file permissions, not fapolicyd: the STIG's `077` umask meant `sudo cp` created a `-rwx------ root root` copy.)
+
+**Operational impact:** Ansible's `local` connection is blocked while fapolicyd is enforcing. Future playbook runs against this host need fapolicyd stopped for the duration of the run, or a trust rule for Ansible's temporary directory.
+
+Test files were removed afterward.
