@@ -1,0 +1,9 @@
+stig_id,severity,cat,rule,title,nist_800_53,group
+RHEL-10-200601,medium,CAT II,service_fapolicyd_enabled,Enable the File Access Policy Service,CM-6(a); SI-4(22),Services > Application Whitelisting Daemon
+RHEL-10-600450,medium,CAT II,accounts_authorized_local_users,Only Authorized Local User Accounts Exist on Operating System,,Account and Access Control > Protect Accounts by Restricting Password-Based Login
+RHEL-10-600500,medium,CAT II,use_pam_wheel_for_su,Enforce usage of pam_wheel for su authentication,,Account and Access Control > Protect Accounts by Restricting Password-Based Login
+RHEL-10-600730,medium,CAT II,accounts_password_all_shadowed_sha512,Verify All Account Password Hashes are Shadowed with SHA512,IA-5(1)(c); IA-5(1).1(v); IA-7; IA-7.1,Account and Access Control > Protect Accounts by Restricting Password-Based Login
+RHEL-10-700410,medium,CAT II,selinux_context_elevation_for_sudo,Elevate The SELinux Context When An Administrator Calls The Sudo Command,AC-3(4); AC-6(10),System Settings > SELinux
+RHEL-10-701280,medium,CAT II,sssd_enable_certmap,Enable Certmap in SSSD,IA-5 (2) (c),Services > System Security Services Daemon
+RHEL-10-800040,medium,CAT II,chronyd_server_directive,Ensure Chrony is only configured with the server directive,,Services > Network Time Protocol
+RHEL-10-800060,medium,CAT II,network_configure_name_resolution,Configure Multiple DNS Servers in /etc/resolv.conf,CM-6(a); SC-20(a),System Settings > Network Configuration and Firewalls
