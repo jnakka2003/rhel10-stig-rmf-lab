@@ -3,7 +3,7 @@
 Findings that remain open after remediation, with the reason and plan for each. In DoD environments, a POA&M is how known weaknesses are tracked and accepted by an authorizing official instead of being ignored. For this homelab, the system owner (the author) acts as the authorizing official.
 
 **System:** `stig01` (RHEL 10.2), DISA STIG for RHEL 10 V1R2, scap-security-guide 0.1.82
-**As of:** 2026-11-01
+**As of:** 2026-10-31
 
 ## Status key
 

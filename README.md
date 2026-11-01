@@ -1,6 +1,6 @@
 # RHEL 10 STIG Hardening and RMF Lab
 
-> **Status:** In progress. Baseline scan and remediation results will be added as the lab is completed.
+> **Result:** DISA STIG compliance raised from **49.0% to 98.4%** (256 failed rules down to 3). All 7 CAT I findings fixed by hand; the bulk of CAT II/III automated with Ansible; the remaining 3 findings tracked in a POA&M.
 
 A homelab project that takes a fresh Red Hat Enterprise Linux 10 server through a small-scale version of the DoD Risk Management Framework (RMF): scan it against the DISA STIG, fix the findings by hand and with Ansible, track what's left in a POA&M, and keep monitoring it with weekly patch and compliance reports.
 
@@ -34,14 +34,16 @@ Full build details, including the STIG partition layout and why each setting was
 |---|---|---|---|
 | Baseline (fresh install) | 2026-10-30 | 49.0% | 256 (7 CAT I, 234 CAT II, 11 CAT III, 4 unrated) |
 | After 7 CAT I manual fixes + DISA STIG Ansible playbook | 2026-10-31 | **96.6%** | 8 (0 CAT I, 8 CAT II) |
-| Final, after remaining fixes and POA&M | | | |
+| **Final:** 5 more CAT II fixed by hand; rest in POA&M | 2026-10-31 | **98.4%** | 3 (all CAT II, all in the [POA&M](docs/poam.md)) |
 
 Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), aligned to **STIG V1R2**. Content: scap-security-guide 0.1.82. Scanner: OpenSCAP 1.4.4.
 
 ![Baseline OpenSCAP report: 49% score, 256 failed rules](docs/images/04-baseline-report.png)
 
 - Baseline breakdown by severity, NIST 800-53 family, and area, plus every CAT I finding: [`scans/baseline/summary.md`](scans/baseline/summary.md)
-- Post-remediation breakdown and the 8 remaining findings: [`scans/remediated/summary.md`](scans/remediated/summary.md)
+- Post-playbook breakdown and the 8 findings left at that point: [`scans/remediated/summary.md`](scans/remediated/summary.md)
+- Every manual fix with its check, fix, and verification evidence: [`docs/remediation.md`](docs/remediation.md)
+- Remaining findings, accepted risks, and residual risks found during testing: [`docs/poam.md`](docs/poam.md)
 - How the playbook was reviewed and run, including the fapolicyd lockout: [`ansible/README.md`](ansible/README.md)
 - Full HTML reports (download and open in a browser): [baseline](scans/baseline/report.html), [after remediation](scans/remediated/report.html)
 
@@ -66,6 +68,14 @@ Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), al
 ├── scripts/          Helper scripts (scan summary, weekly report)
 └── MAINTENANCE.md    Operations runbook and cadence
 ```
+
+## What I learned
+
+- **Most STIG findings are about explicit configuration, not missing hardening.** SSH already refused empty passwords and dnf already verified repository packages; the findings were that nobody had *written down* the secure setting, so it could drift or change with a package update.
+- **Read official fixes before running them.** The STIG's GRUB fix text changes only one of the two lines that reference `root`, which would lock out boot-entry editing. The official Ctrl-Alt-Del fix appends to `/etc/systemd/system.conf`, a file RHEL 10 no longer ships, which would have produced a config systemd ignores.
+- **One control can be touched by several rules.** Skipping the task that enabled fapolicyd wasn't enough; a different rule restarted it and blocked Ansible 1,060 tasks into the run.
+- **Test the control, not just the scan.** A live Ctrl-Alt-Del burst test, a GRUB edit attempt, and an untrusted-binary test confirmed the controls work. Testing fapolicyd also found a real gap (shell scripts are allowed by RHEL's default rules) that the scanner doesn't report.
+- **Some failures are races.** `/etc/resolv.conf` looked unchanged right after a NetworkManager change; reading it again a moment later showed the fix had applied.
 
 ## A note on passwords: NIST vs. the STIG
 
