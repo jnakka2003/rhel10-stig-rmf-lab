@@ -71,11 +71,11 @@ Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), al
 
 ## What I learned
 
-- **Most STIG findings are about explicit configuration, not missing hardening.** SSH already refused empty passwords and dnf already verified repository packages; the findings were that nobody had *written down* the secure setting, so it could drift or change with a package update.
-- **Read official fixes before running them.** The STIG's GRUB fix text changes only one of the two lines that reference `root`, which would lock out boot-entry editing. The official Ctrl-Alt-Del fix appends to `/etc/systemd/system.conf`, a file RHEL 10 no longer ships, which would have produced a config systemd ignores.
-- **One control can be touched by several rules.** Skipping the task that enabled fapolicyd wasn't enough; a different rule restarted it and blocked Ansible 1,060 tasks into the run.
-- **Test the control, not just the scan.** A live Ctrl-Alt-Del burst test, a GRUB edit attempt, and an untrusted-binary test confirmed the controls work. Testing fapolicyd also found a real gap (shell scripts are allowed by RHEL's default rules) that the scanner doesn't report.
-- **Some failures are races.** `/etc/resolv.conf` looked unchanged right after a NetworkManager change; reading it again a moment later showed the fix had applied.
+- **Most STIG findings were settings nobody wrote down.** SSH already refused empty passwords. dnf already checked signatures on repo packages. Both still failed because nobody had written the secure setting into a config file, so it could drift or change with a package update.
+- **Read official fixes before running them.** The STIG's GRUB fix text only changes one of the two lines that reference `root`. Following it as written would have locked me out of editing boot entries. The official Ctrl-Alt-Del fix appends to `/etc/systemd/system.conf`, but RHEL 10 doesn't ship that file anymore. The result would have been a config systemd ignores.
+- **Several rules can touch the same control.** I skipped the task that enabled fapolicyd, and that wasn't enough. A different rule restarted it and blocked Ansible 1,060 tasks into the run.
+- **Test the controls themselves.** I ran a live Ctrl-Alt-Del burst, tried to edit a GRUB entry, and ran an untrusted binary. All three controls held. The fapolicyd test also turned up a real gap the scanner doesn't report: RHEL's default rules allow shell scripts.
+- **Some failures are just timing.** Right after a NetworkManager change, `/etc/resolv.conf` looked unchanged. I read it again a moment later and the fix was there.
 
 ## A note on passwords: NIST vs. the STIG
 
