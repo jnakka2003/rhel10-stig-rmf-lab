@@ -1,0 +1,4 @@
+stig_id,severity,cat,rule,title,nist_800_53,group
+RHEL-10-600450,medium,CAT II,accounts_authorized_local_users,Only Authorized Local User Accounts Exist on Operating System,,Account and Access Control > Protect Accounts by Restricting Password-Based Login
+RHEL-10-700410,medium,CAT II,selinux_context_elevation_for_sudo,Elevate The SELinux Context When An Administrator Calls The Sudo Command,AC-3(4); AC-6(10),System Settings > SELinux
+RHEL-10-701280,medium,CAT II,sssd_enable_certmap,Enable Certmap in SSSD,IA-5 (2) (c),Services > System Security Services Daemon

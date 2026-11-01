@@ -38,14 +38,17 @@ Full build details, including the STIG partition layout and why each setting was
 
 Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), aligned to **STIG V1R2**. Content: scap-security-guide 0.1.82. Scanner: OpenSCAP 1.4.4.
 
-![Baseline OpenSCAP report: 49% score, 256 failed rules](docs/images/04-baseline-report.png)
+| Baseline: 49.0%, 256 failed | Final: 98.4%, 3 failed |
+|---|---|
+| ![Baseline OpenSCAP report](docs/images/04-baseline-report.png) | ![Final OpenSCAP report](docs/images/06-final-report.png) |
 
 - Baseline breakdown by severity, NIST 800-53 family, and area, plus every CAT I finding: [`scans/baseline/summary.md`](scans/baseline/summary.md)
+- Final breakdown of the 3 remaining findings: [`scans/final/summary.md`](scans/final/summary.md)
 - Post-playbook breakdown and the 8 findings left at that point: [`scans/remediated/summary.md`](scans/remediated/summary.md)
 - Every manual fix with its check, fix, and verification evidence: [`docs/remediation.md`](docs/remediation.md)
 - Remaining findings, accepted risks, and residual risks found during testing: [`docs/poam.md`](docs/poam.md)
 - How the playbook was reviewed and run, including the fapolicyd lockout: [`ansible/README.md`](ansible/README.md)
-- Full HTML reports (download and open in a browser): [baseline](scans/baseline/report.html), [after remediation](scans/remediated/report.html)
+- Full HTML reports (download and open in a browser): [baseline](scans/baseline/report.html), [after the playbook](scans/remediated/report.html), [final](scans/final/report.html)
 
 **Why a minimal install scored only 49%:** most STIG rules check for settings that must be actively configured (audit rules, PAM password and lockout policy, SSH restrictions, mount options, kernel parameters), not for software that shouldn't be installed. RHEL ships with general-purpose defaults, not DoD defaults.
 
@@ -64,7 +67,8 @@ Profile: DISA STIG for RHEL 10 (`xccdf_org.ssgproject.content_profile_stig`), al
 ├── reports/weekly/   Weekly continuous-monitoring reports
 ├── scans/
 │   ├── baseline/     OpenSCAP results before any changes
-│   └── remediated/   OpenSCAP results after CAT I fixes and the Ansible playbook
+│   ├── remediated/   OpenSCAP results after CAT I fixes and the Ansible playbook
+│   └── final/        OpenSCAP results after the remaining manual fixes
 ├── scripts/          Helper scripts (scan summary, weekly report)
 └── MAINTENANCE.md    Operations runbook and cadence
 ```
